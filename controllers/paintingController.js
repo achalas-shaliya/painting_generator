@@ -75,14 +75,14 @@ async function generatePaintings(req, res) {
       newIdeas.push(idea);
       
       // Create painting entry in processing state
-      const paintingParams = [titleId, idea.id, 'pending'];
+      const paintingParams = [titleId, idea.id, 'pending', 'https://placehold.co/600x400/f1c40f/000000?text=Pending'];
       if (paintingParams.some(p => p === undefined)) {
         console.error('Attempted to execute query with undefined parameter:', { paintingParams });
         return res.status(500).json({ error: 'Internal server error: Invalid query parameter detected' });
       }
       
       await pool.execute(
-        'INSERT INTO paintings (title_id, idea_id, status) VALUES (?, ?, ?)',
+        'INSERT INTO paintings (title_id, idea_id, status, image_url) VALUES (?, ?, ?, ?)',
         paintingParams
       );
 
