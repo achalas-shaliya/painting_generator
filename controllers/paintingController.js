@@ -93,6 +93,12 @@ async function generatePaintings(req, res) {
       });
 
     }
+
+    // Return immediately with the generated ideas
+    res.status(200).json({
+      message: `Started generating ${quantity} paintings`,
+      ideas: newIdeas
+    });
     
     // Start image generation in parallel (respecting MAX_PARALLEL limit)
     const processIdeas = async () => {
@@ -125,11 +131,7 @@ async function generatePaintings(req, res) {
     // Start processing in background
     processIdeas();
     
-    // Return immediately with the generated ideas
-    res.status(200).json({
-      message: `Started generating ${quantity} paintings`,
-      ideas: newIdeas
-    });
+    
   } catch (error) {
     console.error('Error in generatePaintings:', error);
     res.status(500).json({ error: 'Failed to generate paintings' });

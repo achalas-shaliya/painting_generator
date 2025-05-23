@@ -467,47 +467,24 @@ function setupSocketListeners() {
   socket.on("thumbnailStatus", (data) => {
     console.log("Socket listening...", data);
 
-    const thumbContainer = document.querySelector(
-      `.thumbnail-item[data-id="${data.titleId}"]`
-    );
-    if (thumbContainer) {
-      // Find the status button inside this container
-      const statusBtn = thumbContainer.querySelector("#status-btn");
-      if (statusBtn) {
-        statusBtn.textContent = data.status;
-      }
-    } else {
-      console.warn(`No thumbnail container found for titleId: ${data.titleId}`);
-    }
+    // const thumbContainer = document.querySelector(
+    //   `.thumbnail-item[data-id="${data.titleId}"]`
+    // );
+    // if (thumbContainer) {
+    //   // Find the status button inside this container
+    //   const statusBtn = thumbContainer.querySelector("#status-btn");
+    //   if (statusBtn) {
+    //     statusBtn.textContent = data.status;
+    //   }
+    // } else {
+    //   console.warn(`No thumbnail container found for titleId: ${data.titleId}`);
+    // }
 
-    if (selectedTitle) {
-      loadTitle(selectedTitle);
-    }
-    // Example data: { titleId, status, thumbnails, completed, total, ... }
-    if (!currentTitle || currentTitle.id !== data.titleId) return;
+    // if (!currentTitle || currentTitle.id !== data.titleId) return;
+    // console.log("Thumbnail status update:", currentTitle);
 
-    // Update progress UI
-    if (data.status === "processing") {
-      progressSection.style.display = "block";
-      ai2Status.textContent = "Generating images...";
-    }
-    if (data.status === "completed" && data.thumbnails) {
-      // Optionally update the thumbnails grid
-      currentTitle.thumbnails = data.thumbnails;
-      renderSavedThumbnails(currentTitle);
-      progressSection.style.display = "none";
-      moreThumbnailsSection.style.display = "block";
-      showLoading(false);
-    }
-    // Optionally handle 'failed' status
-    if (data.status === "failed") {
-      ai2Status.textContent = "Generation failed.";
-      showLoading(false);
-    }
-    // You can also update progress bar if data.completed/total are sent
-    if (typeof data.completed === "number" && typeof data.total === "number") {
-      ai2Status.textContent = `Generating images... ${data.completed}/${data.total} complete`;
-      ai2Progress.style.width = `${(data.completed / data.total) * 100}%`;
+    if (currentTitle && currentTitle.id && currentTitle.id > 0) {
+      loadTitle({ id: currentTitle.id });
     }
   });
 }
@@ -517,7 +494,8 @@ function setupEventListeners() {
   console.log("Setting up event listeners...");
 
   // New Title Button
-  newTitleBtn.addEventListener("click", () => {
+  newTitleBtn.addEventListener("title-item", () => {
+    currentTitle = null;
     clearMainContent();
     titleInput.focus();
   });
@@ -571,7 +549,7 @@ function setupEventListeners() {
 
       // Generate thumbnails
       console.log(
-        "Generating thumbnails for title ID:",
+        "Generating thumbnails for title ID:1#:",
         currentTitle.id,
         "Quantity:",
         quantity
@@ -580,11 +558,12 @@ function setupEventListeners() {
         currentTitle.id,
         quantity
       );
-      console.log("Generate thumbnails response:", generateResponse.data);
 
+      console.log("Generate thumbnails response:", generateResponse.data);
       // Start polling for thumbnail status instead of loading immediately
       pollThumbnailStatus(currentTitle.id, quantity);
       showLoading(false);
+      loadTitle(currentTitle);
 
       // Refresh titles list after starting generation/polling
       console.log("Refreshing titles list");
@@ -1195,7 +1174,7 @@ function renderThumbnail(thumbnailData, index) {
   statusBtn.textContent = thumbnailData.status;
 
   actions.appendChild(downloadBtn);
-  actions.appendChild(statusBtn);
+  // actions.appendChild(statusBtn);
   actions.appendChild(regenerateBtn);
 
   thumbContainer.appendChild(img);
