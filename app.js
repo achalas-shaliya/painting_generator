@@ -576,11 +576,11 @@ function setupEventListeners() {
         "Quantity:",
         quantity
       );
-      // const generateResponse = await generatePaintings(
-      //   currentTitle.id,
-      //   quantity
-      // );
-      // console.log("Generate thumbnails response:", generateResponse.data);
+      const generateResponse = await generatePaintings(
+        currentTitle.id,
+        quantity
+      );
+      console.log("Generate thumbnails response:", generateResponse.data);
 
       // Start polling for thumbnail status instead of loading immediately
       pollThumbnailStatus(currentTitle.id, quantity);
