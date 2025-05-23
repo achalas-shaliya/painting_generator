@@ -495,6 +495,8 @@ function setupEventListeners() {
 
   // New Title Button
   newTitleBtn.addEventListener("title-item", () => {
+    console.log("New title button clicked");
+
     currentTitle = null;
     clearMainContent();
     titleInput.focus();
@@ -943,7 +945,7 @@ async function generateServerThumbnails(
   isAdditional
 ) {
   // Show progress section
-  progressSection.style.display = "block";
+  // progressSection.style.display = "block";
   thumbnailsEmptyState.style.display = "none";
 
   // Clear existing thumbnails if not generating additional ones
@@ -961,10 +963,29 @@ async function generateServerThumbnails(
     thumbContainer.className = "thumbnail-item";
     thumbContainer.id = `thumb-${startIndex + i}`;
 
-    const loadingThumb = document.createElement("div");
-    loadingThumb.className = "loading-thumbnail";
+    // Placeholder image
+    const placeholderImg = document.createElement("img");
+    placeholderImg.className = "thumbnail-image";
+    placeholderImg.src =
+      "https://placehold.co/600x400/f1c40f/000000?text=Generating...";
+    placeholderImg.alt = "Generating...";
 
-    thumbContainer.appendChild(loadingThumb);
+    // Progress bar
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    const progressFill = document.createElement("div");
+    progressFill.className = "progress-fill";
+    progressBar.appendChild(progressFill);
+
+    // Status text
+    const statusText = document.createElement("div");
+    statusText.className = "thumbnail-status";
+    statusText.textContent = "Pending...";
+
+    thumbContainer.appendChild(placeholderImg);
+    thumbContainer.appendChild(progressBar);
+    thumbContainer.appendChild(statusText);
+
     thumbnailsGrid.appendChild(thumbContainer);
   }
 
@@ -1008,7 +1029,7 @@ async function generateServerThumbnails(
         );
 
         // After all thumbnails are generated
-        progressSection.style.display = "none";
+        // progressSection.style.display = "none";
         moreThumbnailsSection.style.display = "block";
 
         // Save the generated thumbnails
@@ -1027,7 +1048,7 @@ async function generateServerThumbnails(
   } catch (error) {
     console.error("Error generating thumbnails:", error);
     alert("Failed to generate paintings. Please try again.");
-    progressSection.style.display = "none";
+    // progressSection.style.display = "none";
     thumbnailReady = null;
   }
 }
@@ -1106,84 +1127,102 @@ function generateFullPrompt(title, instructions, index) {
 
 // Render a single thumbnail
 function renderThumbnail(thumbnailData, index) {
-  console.log("Rendering thumbnail data:", thumbnailData);
   const thumbContainer = document.getElementById(`thumb-${index}`);
   thumbContainer.innerHTML = "";
   thumbContainer.dataset.id = thumbnailData.id;
 
-  if (thumbnailData.status === "failed") {
-    // Show error state for failed thumbnails
-    const errorDiv = document.createElement("div");
-    errorDiv.className = "thumbnail-error";
+  // Status-based placeholder
+  let placeholderUrl = "";
+  let statusText = "";
+  let progress = 0;
 
-    const errorIcon = document.createElement("div");
-    errorIcon.className = "error-icon";
-    errorIcon.innerHTML = "!";
+  switch (thumbnailData.status) {
+    case "pending":
+      placeholderUrl =
+        "https://placehold.co/600x400/f1c40f/000000?text=Pending";
+      statusText = "Pending...";
+      progress = 10;
+      break;
+    case "processing":
+      placeholderUrl =
+        "https://placehold.co/600x400/3498db/ffffff?text=Processing";
+      statusText = "Processing...";
+      progress = 60;
+      break;
+    case "completed":
+      placeholderUrl = thumbnailData.image_url;
+      statusText = "Complete";
+      progress = 100;
+      break;
+    case "failed":
+      placeholderUrl = "https://placehold.co/600x400/7f8c8d/ffffff?text=Failed";
+      statusText = "Failed";
+      progress = 100;
+      break;
+    default:
+      placeholderUrl =
+        "https://placehold.co/600x400/f1c40f/000000?text=Pending";
+      statusText = "Pending...";
+      progress = 0;
+  }
 
-    const errorMessage = document.createElement("p");
-    errorMessage.className = "error-message";
-    errorMessage.textContent =
-      thumbnailData.error_message || "Thumbnail generation failed";
+  // Image (placeholder or real)
+  const img = document.createElement("img");
+  img.src = placeholderUrl;
+  img.alt = thumbnailData.summary || statusText;
+  img.className = "thumbnail-image";
 
-    errorDiv.appendChild(errorIcon);
-    errorDiv.appendChild(errorMessage);
+  // Fade-in effect when image loads
+  img.onload = () => {
+    img.classList.add("fade-in");
+  };
+
+  // Progress bar
+  const progressBar = document.createElement("div");
+  progressBar.className = "progress-bar";
+  const progressFill = document.createElement("div");
+  progressFill.className = "progress-fill";
+  progressFill.style.width = `${progress}%`;
+  progressBar.appendChild(progressFill);
+
+  // Status text
+  const statusDiv = document.createElement("div");
+  statusDiv.className = "thumbnail-status";
+  statusDiv.textContent = statusText;
+
+  thumbContainer.appendChild(img);
+  thumbContainer.appendChild(progressBar);
+  thumbContainer.appendChild(statusDiv);
+
+  // If completed, show actions
+  if (thumbnailData.status === "completed") {
+    const actions = document.createElement("div");
+    actions.className = "thumbnail-actions";
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.className = "action-btn";
+    downloadBtn.textContent = "Download";
+    downloadBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      alert(`Downloading: ${thumbnailData.summary}`);
+    });
 
     const regenerateBtn = document.createElement("button");
     regenerateBtn.className = "action-btn";
-    regenerateBtn.textContent = "Try Again";
+    regenerateBtn.textContent = "Regenerate";
     regenerateBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       regenerateSingleThumbnail(index, thumbnailData.id);
     });
 
-    errorDiv.appendChild(regenerateBtn);
-    thumbContainer.appendChild(errorDiv);
-    return;
+    actions.appendChild(downloadBtn);
+    actions.appendChild(regenerateBtn);
+    thumbContainer.appendChild(actions);
+
+    thumbContainer.addEventListener("click", () => {
+      showPromptDetails(thumbnailData);
+    });
   }
-
-  // Regular thumbnail rendering for successful thumbnails
-  const img = document.createElement("img");
-  img.src = thumbnailData.image_url;
-  img.alt = thumbnailData.summary;
-  img.className = "thumbnail-image";
-
-  const actions = document.createElement("div");
-  actions.className = "thumbnail-actions";
-
-  const downloadBtn = document.createElement("button");
-  downloadBtn.className = "action-btn";
-  downloadBtn.textContent = "Download";
-  downloadBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent opening modal when clicking download
-    // In a real app, this would download the image
-    alert(`Downloading: ${thumbnailData.summary}`);
-  });
-
-  const regenerateBtn = document.createElement("button");
-  regenerateBtn.className = "action-btn";
-  regenerateBtn.textContent = "Regenerate";
-  regenerateBtn.addEventListener("click", (e) => {
-    e.stopPropagation(); // Prevent opening modal when clicking regenerate
-    // In a real app, this would regenerate this specific thumbnail
-    regenerateSingleThumbnail(index, thumbnailData.id);
-  });
-
-  const statusBtn = document.createElement("button");
-  statusBtn.className = "action-btn";
-  statusBtn.id = "status-btn";
-  statusBtn.textContent = thumbnailData.status;
-
-  actions.appendChild(downloadBtn);
-  // actions.appendChild(statusBtn);
-  actions.appendChild(regenerateBtn);
-
-  thumbContainer.appendChild(img);
-  thumbContainer.appendChild(actions);
-
-  // Add click event to view prompt details
-  thumbContainer.addEventListener("click", () => {
-    showPromptDetails(thumbnailData);
-  });
 }
 
 // Show prompt details in modal
@@ -1336,7 +1375,7 @@ function renderTitlesList() {
 
 // Load a title when clicked from the sidebar
 async function loadTitle(titleItem) {
-  showLoading(true);
+  // showLoading(true);
 
   try {
     const titleId = titleItem.id;
@@ -1451,6 +1490,7 @@ function renderSavedThumbnails(title) {
     title.thumbnails.length === 0
   ) {
     thumbnailsEmptyState.style.display = "block";
+    // progressSection.style.display = "none"; // Hide progress if no thumbnails
     return;
   }
 
@@ -1460,6 +1500,14 @@ function renderSavedThumbnails(title) {
   const validThumbnails = title.thumbnails.filter(
     (thumbnail) => thumbnail && typeof thumbnail === "object" && thumbnail.id
   );
+
+  // Check if all are completed or failed
+  const allDone =
+    validThumbnails.length > 0 &&
+    validThumbnails.every(
+      (t) => t.status === "completed" || t.status === "failed"
+    );
+  // // progressSection.style.display = allDone ? "none" : "block";
 
   if (validThumbnails.length === 0) {
     thumbnailsEmptyState.style.display = "block";
@@ -1601,9 +1649,6 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
     let pendingCount = 0;
 
     // Render each thumbnail with its current status
-    // We need to determine the correct index for rendering.
-    // If loadTitle fetches initial thumbnails, we might need to map by ID or rely on the ASC order.
-    // Assuming the index corresponds to the position in the ASC sorted list for this title.
     relevantThumbnails.forEach((thumbnail, index) => {
       // Ensure the container exists (it should have been created by generateServerThumbnails)
       const containerExists = document.getElementById(`thumb-${index}`);
@@ -1636,10 +1681,9 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
     ai2Progress.style.width = `${progressPercentage}%`;
 
     // Check if all *relevant* thumbnails for this title are completed or failed
-    // This check might need refinement if multiple batches can run concurrently
     if (completedCount === totalRelevant && totalRelevant >= expectedQuantity) {
       console.log(`[Poll #${attempt + 1}] Condition met. Polling finished.`);
-      progressSection.style.display = "none";
+      // progressSection.style.display = "none";
       moreThumbnailsSection.style.display = "block";
       showLoading(false);
     } else {
@@ -1649,10 +1693,10 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
         }] Condition not met (${completedCount}/${totalRelevant} completed). Scheduling next poll.`
       );
       // Not finished, poll again after interval
-      setTimeout(
-        () => pollThumbnailStatus(titleId, expectedQuantity, attempt + 1),
-        pollInterval
-      );
+      // setTimeout(
+      //   () => pollThumbnailStatus(titleId, expectedQuantity, attempt + 1),
+      //   pollInterval
+      // );
     }
   } catch (error) {
     console.error(`[Poll #${attempt + 1}] Error during polling:`, error);
@@ -1660,10 +1704,10 @@ async function pollThumbnailStatus(titleId, expectedQuantity, attempt = 0) {
     // If it's a transient network error, could retry a few times before failing
     if (attempt < maxAttempts - 1) {
       console.log(`[Poll #${attempt + 1}] Retrying poll after error.`);
-      setTimeout(
-        () => pollThumbnailStatus(titleId, expectedQuantity, attempt + 1),
-        pollInterval
-      ); // Retry on error
+      // setTimeout(
+      //   () => pollThumbnailStatus(titleId, expectedQuantity, attempt + 1),
+      //   pollInterval
+      // ); // Retry on error
     } else {
       console.error(`[Poll #${attempt + 1}] Max retries reached after error.`);
       alert(
