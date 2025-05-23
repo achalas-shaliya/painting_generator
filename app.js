@@ -16,7 +16,9 @@ import {
   getThumbnails as getPaintings,
 } from "./frontend/apiService.js";
 
-const socket = io("http://localhost:3000");
+const host = window.location.hostname;
+const port = 3000;
+const socket = io(`http://${host}:${port}`);
 
 // Simulated Server API
 const ServerAPI = {
